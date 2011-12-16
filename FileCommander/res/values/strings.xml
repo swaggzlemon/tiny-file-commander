@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tiny File Commander</string>
+    <string name="dialog_createfile_title">Create new file</string>
+    <string name="dialog_createfile_message">Enter filename</string>
+    <string name="dialog_createdir_title">Create new directory</string>
+    <string name="dialog_createdir_message">Enter directory name</string>
+    <string name="dialog_OK">Ok</string>
+    <string name="dialog_CANCEL">Cancel</string>
+    <string name="contextMenu_rename">Rename</string>
+    <string name="contextMenu_delete">Delete</string>
+    <string name="dialog_rename_title">Rename File/Directory</string>
+    <string name="dialog_rename_message">Enter new name</string>
+    <string name="contextMenu_send">Send</string>
+    <string name="dialog_delete_title">Delete File</string>
+    <string name="dialog_delete_message">Do you realy want to delete this?</string>
+    <string name="exception_unknowFileType">Unknown filetyp</string>
+    <string name="operation_success">Operation successful</string>
+    <string name="operation_failed">Operation failed</string>
+    <string name="activation_fastDelete">Instant delete mode activated... click to delete instantly</string>
+    <string name="dialog_move_title">Move file</string>
+    <string name="dialog_move_message">Move file here?</string>
+</resources>

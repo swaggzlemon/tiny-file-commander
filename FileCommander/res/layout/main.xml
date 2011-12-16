@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="fill_parent" android:id="@+id/lineralyout" android:layout_height="fill_parent" android:orientation="vertical" android:background="#ffffff">
+    <TextView android:layout_height="wrap_content" android:layout_width="fill_parent" android:id="@+id/textViewPathLine"></TextView>
+    <HorizontalScrollView android:layout_width="wrap_content" android:id="@+id/horizontalScrollView_ToolButtons" android:layout_height="wrap_content">
+        <LinearLayout android:layout_height="fill_parent" android:orientation="horizontal" android:id="@+id/linearLayout_ToolButtons" android:layout_width="fill_parent">
+            <ImageView android:scaleType="fitCenter" android:layout_height="60dip" android:layout_width="60dip" android:clickable="true" android:id="@+id/imageViewBack" android:background="@drawable/blue_glossy_btnbase80_arrowleft"></ImageView>
+            <ImageView android:id="@+id/imageViewHome" android:layout_height="60dip" android:layout_width="60dip" android:background="@drawable/blue_glossy_btnbase80_home" android:clickable="true" android:scaleType="fitCenter"></ImageView>
+            <ImageView android:id="@+id/imageViewReload" android:background="@drawable/blue_glossy_btnbase2_reload80" android:clickable="true" android:layout_height="60dip" android:layout_width="60dip" android:scaleType="fitCenter"></ImageView>
+            <ImageView android:id="@+id/imageViewFilePlus" android:layout_height="60dip" android:layout_width="60dip" android:clickable="true" android:scaleType="fitCenter" android:background="@drawable/blue_glossy_btnbase80_fileplus"></ImageView>
+            <ImageView android:id="@+id/imageViewDirPlus" android:layout_height="60dip" android:layout_width="60dip" android:clickable="true" android:scaleType="fitCenter" android:background="@drawable/blue_glossy_btnbase80_dirplus"></ImageView>
+            <ImageView android:id="@+id/imageViewMove" android:layout_height="60dip" android:layout_width="60dip" android:clickable="true" android:scaleType="fitCenter" android:background="@drawable/blue_glossy_btnbase2_movedest_inactive"></ImageView>
+            <ImageView android:id="@+id/imageViewDelete" android:layout_height="60dip" android:layout_width="60dip" android:background="@drawable/blue_glossy_btnbase2_deleteblack80" android:clickable="true" android:scaleType="fitCenter"></ImageView>
+        </LinearLayout>
+    </HorizontalScrollView>
+<GridView android:layout_width="fill_parent" android:id="@+id/gridViewDir" android:numColumns="auto_fit" android:layout_height="fill_parent" android:clipChildren="true" android:columnWidth="75dip" android:longClickable="true"></GridView>
+</LinearLayout>

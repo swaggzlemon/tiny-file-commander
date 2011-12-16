@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tiny File Commander</string>
+    <string name="dialog_createfile_title">Neue Datei erstellen</string>
+    <string name="dialog_createfile_message">Dateinamen eingeben</string>
+    <string name="dialog_createdir_title">Neues Verzeichnis anlegen</string>
+    <string name="dialog_createdir_message">Verzeichnisnamen eingeben</string>
+    <string name="dialog_OK">Ok</string>
+    <string name="dialog_CANCEL">Abbrechen</string>
+    <string name="contextMenu_rename">Umbenennen</string>
+    <string name="contextMenu_delete">Löschen</string>
+    <string name="dialog_rename_title">Datei oder Verzeichnis umbenennen</string>
+    <string name="dialog_rename_message">Neuer Name</string>
+    <string name="contextMenu_send">Versenden</string>
+    <string name="dialog_delete_title">Datei löschen</string>
+    <string name="dialog_delete_message">Wollen Sie das wirklich löschen?</string>
+    <string name="exception_unknowFileType">Unbekannter Dateityp</string>
+    <string name="operation_success">Durchgeführt</string>
+    <string name="operation_failed">Fehlgeschlagen</string>
+    <string name="activation_fastDelete">Schnelles löschen aktiviert... mit einem klick sofort löschen</string>
+    <string name="dialog_move_title">Verschieben</string>
+    <string name="dialog_move_message">Hierher verschieben?</string>
+</resources>
