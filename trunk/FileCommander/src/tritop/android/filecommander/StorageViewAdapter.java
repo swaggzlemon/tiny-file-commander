@@ -216,12 +216,20 @@ public class StorageViewAdapter extends BaseAdapter {
 		return 0;
 	}
 
+	
+	//*************************************************************************
+	// Build item views for the grid view
+	//*************************************************************************
+	
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
-		LayoutInflater inf = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-		convertView = inf.inflate(R.layout.fileview, parent, false);
+		if(convertView==null){
+			LayoutInflater inf = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+			convertView = inf.inflate(R.layout.fileview, parent, false);
+		}
 		TextView tvFilename = (TextView) convertView.findViewById(R.id.textViewFilename);
 		ImageView imFile = (ImageView) convertView.findViewById(R.id.imageViewFileIcon);
+		
 		if(lmdirs.contains(mFiles[position])){
 			imFile.setImageResource(R.drawable.blue_glossy_dirbaseb100);
 		}
