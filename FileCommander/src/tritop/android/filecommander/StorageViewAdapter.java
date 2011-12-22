@@ -70,7 +70,6 @@ public class StorageViewAdapter extends BaseAdapter {
 	//*************************************************************************
 	
 	public boolean relocateToRoot(String newPath){
-		Log.e("ADAPTER","PATH: "+newPath);
 		if(mCurrentPath.equals(newPath)){
 			return true;
 		}

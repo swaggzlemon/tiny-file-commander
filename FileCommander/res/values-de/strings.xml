@@ -20,4 +20,11 @@
     <string name="activation_fastDelete">Schnelles löschen aktiviert... mit einem klick sofort löschen</string>
     <string name="dialog_move_title">Verschieben</string>
     <string name="dialog_move_message">Hierher verschieben?</string>
+    <string name="contextMenu_move">Verschieben</string>
+    <string name="contextMenu_copy">Kopieren</string>
+    <string name="dialog_copy_title">Kopiere</string>
+    <string name="preference_fastdelete_title">Schnelles Löschen</string>
+    <string name="preference_fastdelete_summary">Nachfragen vor dem Löschen</string>
+    <string name="optionmenu_quit">Beenden</string>
+    <string name="optionmenu_preferences">Einstellungen</string>
 </resources>
