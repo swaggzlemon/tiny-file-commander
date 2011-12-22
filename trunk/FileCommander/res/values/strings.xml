@@ -20,4 +20,11 @@
     <string name="activation_fastDelete">Instant delete mode activated... click to delete instantly</string>
     <string name="dialog_move_title">Move file</string>
     <string name="dialog_move_message">Move file here?</string>
+    <string name="contextMenu_move">Move</string>
+    <string name="contextMenu_copy">Copy</string>
+    <string name="dialog_copy_title">Copy</string>
+    <string name="preference_fastdelete_title">Fast delete mode</string>
+    <string name="preference_fastdelete_summary">Show confirmation dialog</string>
+    <string name="optionmenu_quit">Quit</string>
+    <string name="optionmenu_preferences">Preferences</string>
 </resources>

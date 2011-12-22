@@ -19,9 +19,15 @@
  */
 package tritop.android.filecommander;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URLConnection;
+
+
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -29,14 +35,17 @@ import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.DataSetObserver;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.StatFs;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -49,6 +58,7 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -58,18 +68,25 @@ public class FileCommander extends Activity {
     private final static int RENAME_DIALOG = 512;
     private final static int DELETE_DIALOG = 513;
     private final static int MOVE_DIALOG = 514;
+    private final static int COPY_DIALOG = 515;
     
     private String mPath=null;
 	private boolean mDeleteModeActive=false;
 	private boolean mMoveModeActive=false;
+	private boolean mCopyModeActive=false;
 	private int mLastSelectedItem=0;
-	private String mFileMovePath;
+	private String mFileSourcePath;
 	private GridView mGridView;
-	private TextView mPathLine;
+	private TextView mPathLine,mCopyDialogText;
+	private ProgressBar mCopyDialogProBar;
 	private StorageViewAdapter mFSAdapter;
 	private OnClickListener mBackButtonClicked,mHomeButtonClicked,mReloadButtonClicked,mFilePlusButtonClicked,mDirPlusButtonClicked,mMoveButtonClicked,mDeleteButtonClicked;
 	private ImageView mBackButtonImg,mHomeButtonImg,mReloadButtonImg,mFilePlusButtonImg,mDirPlusButtonImg,mMoveButtonImg,mDeleteButtonImg;
 	private DataSetObserver mDObserver;
+	private CopyTask cp;
+	private SharedPreferences mSharedPref;
+	private boolean mPreferenceDeleteConfirmation;
+	
 	
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -86,13 +103,16 @@ public class FileCommander extends Activity {
         mMoveButtonImg = (ImageView) this.findViewById(R.id.imageViewMove);
         mDeleteButtonImg = (ImageView) this.findViewById(R.id.imageViewDelete);
         
+        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
+        mSharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        
         mFSAdapter = new StorageViewAdapter(this);
     	mGridView.setAdapter(mFSAdapter);
     	this.registerForContextMenu(mGridView);
     	setupObserver();
     	setupButtonListeners();
     	setSDRoot();
-    	setDeleteButtonBackground();
+    	setDeleteButtonState();
     	setMoveButtonState();
     }
 
@@ -112,6 +132,7 @@ public class FileCommander extends Activity {
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch(item.getItemId()){
 			case R.id.item_quit: this.finish();break;
+			case R.id.itemPreferences: showPreferenceScreen();break;
 			default:break;
 		}
 		return super.onOptionsItemSelected(item);
@@ -131,9 +152,11 @@ public class FileCommander extends Activity {
 			case R.id.itemDelete:showDialog(DELETE_DIALOG);return true;
 			case R.id.itemSend:sendSelectedFile();return true;
 			case R.id.itemMove:selectMoveFile();return true;
+			case R.id.itemCopy:selectCopyFile();return true;
 		}
 		return super.onContextItemSelected(item);
 	}
+
 
 
 	@Override
@@ -237,6 +260,24 @@ public class FileCommander extends Activity {
 				 });
 				 dialog = builder.create();
 				 return dialog;
+			case COPY_DIALOG:
+				 LayoutInflater inf = this.getLayoutInflater();
+				 View cpdialog = inf.inflate(R.layout.copydialog, null);
+				 this.mCopyDialogText = (TextView) cpdialog.findViewById(R.id.textViewCopy);
+				 this.mCopyDialogProBar = (ProgressBar) cpdialog.findViewById(R.id.progressBarCopy);
+				 builder.setTitle(this.getResources().getString(R.string.dialog_copy_title));
+				 builder.setView(cpdialog);
+				 builder.setCancelable(false)
+				 .setNegativeButton(this.getResources().getString(R.string.dialog_CANCEL), new DialogInterface.OnClickListener() {
+					 public void onClick(DialogInterface dialog, int id) {
+						 if(FileCommander.this.cp != null){
+							 FileCommander.this.cp.cancel(true);
+						 }
+						 dialog.cancel();
+					 }
+				 });
+				 dialog = builder.create();
+				 return dialog;
 		}
 		return super.onCreateDialog(id);
 	}
@@ -263,13 +304,15 @@ public class FileCommander extends Activity {
 	@Override
 	protected void onRestoreInstanceState(Bundle savedInstanceState) {
 		super.onRestoreInstanceState(savedInstanceState);
-		mPath = savedInstanceState.getString("PATH");
+		this.mPath = savedInstanceState.getString("PATH");
 		if(mPath != null){
 			mFSAdapter.relocateToRoot(mPath);
 		}
-		this.mDeleteModeActive=savedInstanceState.getBoolean("DELETEMODEACTIVE",false);
+		this.mFileSourcePath = savedInstanceState.getString("SOURCEPATH");
 		this.mLastSelectedItem=savedInstanceState.getInt("LASTSELECTEDITEM");
-		this.mMoveModeActive=savedInstanceState.getBoolean("MOVEMODEACTIVE");
+		this.mDeleteModeActive=savedInstanceState.getBoolean("DELETEMODEACTIVE",false);
+		this.mMoveModeActive=savedInstanceState.getBoolean("MOVEMODEACTIVE",false);
+		this.mCopyModeActive=savedInstanceState.getBoolean("COPYMODEACTIVE",false);
 	}
 
 	
@@ -282,9 +325,11 @@ public class FileCommander extends Activity {
 		super.onSaveInstanceState(outState);
 		mPath= mFSAdapter.currentPath();
 		outState.putString("PATH",mPath );
-		outState.putBoolean("DELETEMODEACTIVE", this.mDeleteModeActive);
+		outState.putString("SOURCEPATH",mFileSourcePath );
 		outState.putInt("LASTSELECTEDITEM", this.mLastSelectedItem);
+		outState.putBoolean("DELETEMODEACTIVE", this.mDeleteModeActive);
 		outState.putBoolean("MOVEMODEACTIVE", this.mMoveModeActive);
+		outState.putBoolean("COPYMODEACTIVE", this.mCopyModeActive);
 	}
 
 	@Override
@@ -294,11 +339,21 @@ public class FileCommander extends Activity {
 
 	@Override
 	protected void onResume() {
-		setDeleteButtonBackground();
+		loadPreferences();
+		setDeleteButtonState();
 		setMoveButtonState();
 		super.onResume();
 	}
     
+	
+	//*************************************************************************
+	// load Preferences
+	//*************************************************************************
+	
+	private void loadPreferences(){
+		mPreferenceDeleteConfirmation=mSharedPref.getBoolean("preferenceCheckboxFastDeleteConfirmation", true);
+	}
+	
 	
 	//*************************************************************************
 	// Create a new file in the current directory
@@ -309,7 +364,7 @@ public class FileCommander extends Activity {
 		try {
 			if(newFile.createNewFile()){
 				Toast.makeText(this, this.getResources().getString(R.string.operation_success), Toast.LENGTH_LONG).show();
-				mFSAdapter.reloadCurrentDir();
+				reloadAdapterData();
 			}
 			else {
 				Toast.makeText(this, this.getResources().getString(R.string.operation_failed), Toast.LENGTH_LONG).show();
@@ -329,7 +384,7 @@ public class FileCommander extends Activity {
 		File newDir = new File(mFSAdapter.currentPath(), dirname);
 		if(newDir.mkdir()){
 			Toast.makeText(this, this.getResources().getString(R.string.operation_success), Toast.LENGTH_LONG).show();
-			mFSAdapter.reloadCurrentDir();
+			reloadAdapterData();
 		}
 		else {
 			Toast.makeText(this, this.getResources().getString(R.string.operation_failed), Toast.LENGTH_LONG).show();
@@ -346,7 +401,7 @@ public class FileCommander extends Activity {
 		if(mFSAdapter!= null){
 			File renFile = new File(mFSAdapter.getPath(mLastSelectedItem));
 			renFile.renameTo(new File(mFSAdapter.currentPath()+"/"+newName));
-			mFSAdapter.reloadCurrentDir();
+			reloadAdapterData();
 		}
 	}
 	
@@ -359,7 +414,7 @@ public class FileCommander extends Activity {
 		if(mFSAdapter!= null){
 			File renFile = new File(path);
 			renFile.delete();
-			mFSAdapter.reloadCurrentDir();
+			reloadAdapterData();
 		}
 	}
 	
@@ -405,20 +460,21 @@ public class FileCommander extends Activity {
 	
 	public void selectMoveFile(){
 		if(mFSAdapter!= null){
-			mFileMovePath=mFSAdapter.getPath(mLastSelectedItem);
+			mFileSourcePath=mFSAdapter.getPath(mLastSelectedItem);
 			mMoveModeActive=true;
+			mCopyModeActive=false;
 			setMoveButtonState();
 		}
 	}
 
 	public void moveFileHere(){
-		if(mFSAdapter!= null && mFileMovePath!=null){
-			File oldFile = new File(mFileMovePath);
+		if(mFSAdapter!= null && mFileSourcePath!=null){
+			File oldFile = new File(mFileSourcePath);
 			boolean success=oldFile.renameTo(new File(mFSAdapter.currentPath()+"/"+oldFile.getName()));
 			if(success){
 				mMoveModeActive=false;
 				setMoveButtonState();
-				mFSAdapter.reloadCurrentDir();
+				reloadAdapterData();
 			}
 			else {
 				Toast.makeText(this, this.getResources().getString(R.string.operation_failed), Toast.LENGTH_LONG).show();
@@ -427,11 +483,43 @@ public class FileCommander extends Activity {
 		}
 	}
 
+	
+	//*************************************************************************
+	// copy file
+	//*************************************************************************
+	
+	private void selectCopyFile() {
+		if(mFSAdapter!= null){
+			mFileSourcePath=mFSAdapter.getPath(mLastSelectedItem);
+			mCopyModeActive=true;
+			mMoveModeActive=false;
+			setMoveButtonState();
+		}
+	}
+	
+	
+	public void copyFileHere(){
+		if(mFSAdapter!= null && mFileSourcePath!=null){
+			File oldFile = new File(mFileSourcePath);
+			if(oldFile.isFile()){
+				cp = new CopyTask();
+				cp.execute(mFileSourcePath,mFSAdapter.currentPath()+"/"+oldFile.getName());
+			}
+			else {
+				dismissDialog(COPY_DIALOG);
+				reloadAdapterData();
+			}
+			mCopyModeActive=false;
+			setMoveButtonState();
+		}
+	}
+	
+	
 	//*************************************************************************
 	// change the background image of the delete button when it is clicked
 	//*************************************************************************
 	
-	private void setDeleteButtonBackground(){
+	private void setDeleteButtonState(){
 		if(mDeleteModeActive){
         	mDeleteButtonImg.setBackgroundResource(R.drawable.blue_glossy_btnbase2_deletered80);
         }
@@ -441,11 +529,11 @@ public class FileCommander extends Activity {
 	}
 	
 	//*************************************************************************
-	// change the background image of the move button when it is available
+	// change the background image of the move/copy button when it is available
 	//*************************************************************************
 	
 	private void setMoveButtonState(){
-		if(mMoveModeActive){
+		if(mMoveModeActive || mCopyModeActive){
 			mMoveButtonImg.setBackgroundResource(R.drawable.blue_glossy_btnbase2_movedest80);
 			mMoveButtonImg.setClickable(true);
         }
@@ -491,9 +579,7 @@ public class FileCommander extends Activity {
 		mReloadButtonClicked = new OnClickListener(){
 			@Override
 			public void onClick(View v) {
-				if(mFSAdapter != null){
-					mFSAdapter.reloadCurrentDir();
-				}
+				reloadAdapterData();
 			}
 		};
 		mReloadButtonImg.setOnClickListener(mReloadButtonClicked);
@@ -523,12 +609,18 @@ public class FileCommander extends Activity {
 		mDirPlusButtonImg.setOnClickListener(mDirPlusButtonClicked);
 		
 		
-		// moveto button create new dir
+		// move to/copy to button 
 		mMoveButtonClicked = new OnClickListener(){
 			@Override
 			public void onClick(View v) {
 				if(mFSAdapter != null){
-					FileCommander.this.showDialog(MOVE_DIALOG);
+					if(mMoveModeActive){
+						FileCommander.this.showDialog(MOVE_DIALOG);
+					}
+					else if (mCopyModeActive){
+						FileCommander.this.showDialog(COPY_DIALOG);
+						FileCommander.this.copyFileHere();
+					}
 				}
 			}
 		};
@@ -544,7 +636,7 @@ public class FileCommander extends Activity {
 					if(mDeleteModeActive){
 						Toast.makeText(FileCommander.this, FileCommander.this.getResources().getString(R.string.activation_fastDelete), Toast.LENGTH_LONG).show();
 					}
-					setDeleteButtonBackground();
+					setDeleteButtonState();
 				}
 			}
 		};
@@ -556,7 +648,16 @@ public class FileCommander extends Activity {
 			public void onItemClick(AdapterView<?> parent, View view, int position,
 					long id) {
 				if(FileCommander.this.mDeleteModeActive){
-					FileCommander.this.deleteSelectedFile(mFSAdapter.getPath(position));
+					if(mPreferenceDeleteConfirmation){
+						//Fast delete with confirmation dialog
+						mLastSelectedItem=position;
+						showDialog(DELETE_DIALOG);
+					}
+					else {
+						//Fast delete without confirmation
+						FileCommander.this.deleteSelectedFile(mFSAdapter.getPath(position));
+					}
+					
 				}
 				else{
 					if(mFSAdapter.relocateToPosition(position)){
@@ -585,6 +686,27 @@ public class FileCommander extends Activity {
 
 	
 	//*************************************************************************
+	// Refresh Adapter data
+	//*************************************************************************
+	
+	private void reloadAdapterData(){
+		if(mFSAdapter != null){
+			mFSAdapter.reloadCurrentDir();
+		}
+	}
+	
+	
+	//*************************************************************************
+	// start preferenc activity
+	//*************************************************************************
+	
+	private void showPreferenceScreen(){
+		Intent intent = new Intent(this,Preferences.class);
+		this.startActivity(intent);
+	}
+	
+	
+	//*************************************************************************
 	// Observer gets called when adapter data has changed, this could mean we  
 	// need to refresh the displayed path
 	//*************************************************************************
@@ -602,5 +724,64 @@ public class FileCommander extends Activity {
 			mFSAdapter.registerDataSetObserver(mDObserver);
 		}
 	}
+	
+	
+	//*************************************************************************
+	// Copytask, copying is handled asynchronously 
+	// a Progress Dialog in the FileCommander is updated from onProgressUpdate
+	//*************************************************************************
+	
+	private class CopyTask extends AsyncTask<String,Integer,Integer>{
+
+		@Override
+		protected void onPostExecute(Integer result) {
+			dismissDialog(COPY_DIALOG);
+			reloadAdapterData();
+		}
+
+		@Override
+		protected void onPreExecute() {
+			showDialog(COPY_DIALOG);
+		}
+
+		@Override
+		protected void onProgressUpdate(Integer... values) {
+			if(mCopyDialogText!=null && mCopyDialogProBar!=null){
+				mCopyDialogText.setText(values[0].toString()+"%");
+				mCopyDialogProBar.setProgress(values[0]);
+			}
+		}
+
+		@Override
+		protected Integer doInBackground(String... paths) {
+			if(paths.length==2){
+				try {
+					int count=0;
+					long total=0,sourceSize=0;
+					byte[] buffer = new byte[8192];
+					File sourceFile = new File(paths[0]);
+					sourceSize=sourceFile.length();
+					BufferedInputStream bufinp=new BufferedInputStream(new FileInputStream(sourceFile));
+					BufferedOutputStream outFile=new BufferedOutputStream(new FileOutputStream(new File(paths[1])));
+					while (((count = bufinp.read(buffer)) != -1) && (!this.isCancelled())){
+						outFile.write(buffer,0,count);
+						total+=count;
+						publishProgress((int) ((((float)total/sourceSize))*100));
+					} 
+					bufinp.close();
+					outFile.close();
+					if(this.isCancelled()){
+						return 3;
+					}
+				}catch(Exception e){
+					return 2;
+				}
+			  return 0;
+			}
+			return 1;
+		}
+		
+	}
+	
 	
 }
