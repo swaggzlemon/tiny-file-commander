@@ -42,7 +42,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
-import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.LayoutInflater;
@@ -412,8 +411,16 @@ public class FileCommander extends Activity {
 	
 	public void deleteSelectedFile(String path){
 		if(mFSAdapter!= null){
-			File renFile = new File(path);
-			renFile.delete();
+			File delFile = new File(path);
+			if(delFile.isDirectory()){
+				File[] dirContent=delFile.listFiles();
+				if(dirContent!=null){
+					for(File files:dirContent){
+						deleteSelectedFile(files.getAbsolutePath());
+					}
+				}
+			}
+			delFile.delete();
 			reloadAdapterData();
 		}
 	}
@@ -667,7 +674,6 @@ public class FileCommander extends Activity {
 					  File vFile = new File(mFSAdapter.getPath(position));
 					  Intent intent = new Intent(Intent.ACTION_VIEW);
 					  String mime = URLConnection.guessContentTypeFromName (vFile.getAbsolutePath());
-					  Log.e("File Commander","mimetype "+mime);
 					  intent.setDataAndType(Uri.fromFile(vFile),mime);
 					  try{
 						  startActivity(intent);
