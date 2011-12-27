@@ -152,6 +152,7 @@ public class FileCommander extends Activity {
 			case R.id.itemSend:sendSelectedFile();return true;
 			case R.id.itemMove:selectMoveFile();return true;
 			case R.id.itemCopy:selectCopyFile();return true;
+			case R.id.itemOpen:openSelectedFile();return true;
 		}
 		return super.onContextItemSelected(item);
 	}
@@ -433,6 +434,40 @@ public class FileCommander extends Activity {
 	
 	
 	//*************************************************************************
+	// view file 
+	//*************************************************************************
+	
+	public void viewSelectedFile(String path){
+		if(mFSAdapter!= null){
+			  File vFile = new File(path);
+			  Intent intent = new Intent(Intent.ACTION_VIEW);
+			  String mime = URLConnection.guessContentTypeFromName (vFile.getAbsolutePath());
+			  intent.setDataAndType(Uri.fromFile(vFile),mime);
+			  try{
+				  startActivity(intent);
+			  }
+			  
+			  catch(ActivityNotFoundException e){
+				  Toast.makeText(FileCommander.this, FileCommander.this.getResources().getString(R.string.exception_unknowFileType), Toast.LENGTH_LONG).show();
+			  }
+			
+		}
+	}
+	
+	
+	public void openSelectedFile(){
+		if(mFSAdapter!= null){
+			if(mFSAdapter.relocateToPosition(mLastSelectedItem)){
+				mPath= mFSAdapter.currentPath();
+			}
+			else {
+				FileCommander.this.viewSelectedFile(mFSAdapter.getPath(mLastSelectedItem));
+			}
+		}
+	}
+	
+	
+	//*************************************************************************
 	// send file 
 	//*************************************************************************
 	
@@ -535,6 +570,7 @@ public class FileCommander extends Activity {
 		}
 	}
 	
+	
 	//*************************************************************************
 	// change the background image of the move/copy button when it is available
 	//*************************************************************************
@@ -549,6 +585,7 @@ public class FileCommander extends Activity {
 			mMoveButtonImg.setClickable(false);
 		}
 	}
+	
 	
 	//*************************************************************************
 	// Setup click listeners for top push buttons and item Listener for Grid
@@ -671,17 +708,7 @@ public class FileCommander extends Activity {
 						mPath= mFSAdapter.currentPath();
 					}
 					else {
-					  File vFile = new File(mFSAdapter.getPath(position));
-					  Intent intent = new Intent(Intent.ACTION_VIEW);
-					  String mime = URLConnection.guessContentTypeFromName (vFile.getAbsolutePath());
-					  intent.setDataAndType(Uri.fromFile(vFile),mime);
-					  try{
-						  startActivity(intent);
-					  }
-					  
-					  catch(ActivityNotFoundException e){
-						  Toast.makeText(FileCommander.this, FileCommander.this.getResources().getString(R.string.exception_unknowFileType), Toast.LENGTH_LONG).show();
-					  }
+						FileCommander.this.viewSelectedFile(mFSAdapter.getPath(position));
 					}
 				}
 			}
