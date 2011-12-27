@@ -27,4 +27,5 @@
     <string name="preference_fastdelete_summary">Nachfragen vor dem Löschen</string>
     <string name="optionmenu_quit">Beenden</string>
     <string name="optionmenu_preferences">Einstellungen</string>
+    <string name="contextMenu_open">Öffnen</string>
 </resources>
