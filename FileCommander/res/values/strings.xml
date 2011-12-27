@@ -27,4 +27,5 @@
     <string name="preference_fastdelete_summary">Show confirmation dialog</string>
     <string name="optionmenu_quit">Quit</string>
     <string name="optionmenu_preferences">Preferences</string>
+    <string name="contextMenu_open">Open</string>
 </resources>
