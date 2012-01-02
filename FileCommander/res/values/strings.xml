@@ -28,4 +28,13 @@
     <string name="optionmenu_quit">Quit</string>
     <string name="optionmenu_preferences">Preferences</string>
     <string name="contextMenu_open">Open</string>
+    <string name="help_back">This button will move you one directory up</string>
+    <string name="help_home">This button will bring you to to your home directory, this is usualy the root directory of your sdcard (internal or external)</string>
+    <string name="help_refresh">This will reload the current directory</string>
+    <string name="help_fileplus">This button will create an emtpy file in the current directory</string>
+    <string name="help_dirplus">This button will create an emtpy directory in the current directory</string>
+    <string name="help_drop">This button will be activated when you select a file to move or copy. When you use this button the selected file will be moved or copied to the current driectory.</string>
+    <string name="help_fastdelete">This will activate the fast delete mode. While this is activated you can delete everything you touch.</string>
+    <string name="optionmenu_help">Help</string>
+    <string name="help_contextmenu">There is a context menu available for sending, renaming, viewing, starting, moving, copying files. To show the menu just longpress on a file icon.</string>
 </resources>
