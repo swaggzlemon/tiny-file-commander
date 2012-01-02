@@ -28,4 +28,13 @@
     <string name="optionmenu_quit">Beenden</string>
     <string name="optionmenu_preferences">Einstellungen</string>
     <string name="contextMenu_open">Öffnen</string>
+    <string name="help_back">Mit diesem Knopf geht es ein Verzeichnis zurück</string>
+    <string name="help_home">Dieser Knopf führt ins Hauptverzeichnis der SD Karte (entweder interne oder externe Karte)</string>
+    <string name="help_refresh">Mit diesem Knopf wird das aktuelle Verzeichnis neu geladen</string>
+    <string name="help_fileplus">Mit diesem Knopf wird eine neue leere Datei im aktuellen Verzeichnis erstellt</string>
+    <string name="help_dirplus">Mit diesem Knopf wird ein neues Verzeichnis im aktuellen Verzeichnis erstellt</string>
+    <string name="help_drop">Dieser Knopf ist aktiv wenn eine Datei zum kopieren oder verschieben ausgewählt wurde. Damit wird die Datei in das aktuelle Verzeichnis kopiert oder verschoben.</string>
+    <string name="help_fastdelete">Mit diesem Knopf wird der Modus für schnelles Löschen aktiviert. Alles was in diesem Modus berührt wird wird gelöscht.</string>
+    <string name="optionmenu_help">Hilfe</string>
+    <string name="help_contextmenu">Es erscheint ein Pop-Up-Menü wenn sie längere Zeit auf eine Datei klicken. Über das Menü lassen sich Dateien starten, umbenennen, löschen, kopieren, verschieben, versenden.</string>
 </resources>

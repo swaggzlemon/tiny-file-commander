@@ -26,6 +26,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URLConnection;
+import java.util.List;
+import java.util.Vector;
 
 
 
@@ -42,8 +44,10 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -57,6 +61,7 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.PopupWindow;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -68,6 +73,11 @@ public class FileCommander extends Activity {
     private final static int DELETE_DIALOG = 513;
     private final static int MOVE_DIALOG = 514;
     private final static int COPY_DIALOG = 515;
+    private final static int HELP_DIALOG = 516;
+    
+    private volatile long mtotalProgress;
+	private volatile long mtotalSum;
+	private volatile int mcpTasks=0;
     
     private String mPath=null;
 	private boolean mDeleteModeActive=false;
@@ -83,8 +93,10 @@ public class FileCommander extends Activity {
 	private ImageView mBackButtonImg,mHomeButtonImg,mReloadButtonImg,mFilePlusButtonImg,mDirPlusButtonImg,mMoveButtonImg,mDeleteButtonImg;
 	private DataSetObserver mDObserver;
 	private CopyTask cp;
+	private List<CopyTask> cpTaskList;
 	private SharedPreferences mSharedPref;
 	private boolean mPreferenceDeleteConfirmation;
+	
 	
 	
     @Override
@@ -105,6 +117,7 @@ public class FileCommander extends Activity {
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
         mSharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         
+        cpTaskList= new Vector<CopyTask>();
         mFSAdapter = new StorageViewAdapter(this);
     	mGridView.setAdapter(mFSAdapter);
     	this.registerForContextMenu(mGridView);
@@ -130,8 +143,9 @@ public class FileCommander extends Activity {
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch(item.getItemId()){
-			case R.id.item_quit: this.finish();break;
+			case R.id.itemQuit: this.finish();break;
 			case R.id.itemPreferences: showPreferenceScreen();break;
+			case R.id.itemHelp: showHelpScreen();break;
 			default:break;
 		}
 		return super.onOptionsItemSelected(item);
@@ -270,9 +284,21 @@ public class FileCommander extends Activity {
 				 builder.setCancelable(false)
 				 .setNegativeButton(this.getResources().getString(R.string.dialog_CANCEL), new DialogInterface.OnClickListener() {
 					 public void onClick(DialogInterface dialog, int id) {
-						 if(FileCommander.this.cp != null){
-							 FileCommander.this.cp.cancel(true);
+						 if(FileCommander.this.cpTaskList != null){
+							 FileCommander.this.cancelCopy();
 						 }
+						 dialog.cancel();
+					 }
+				 });
+				 dialog = builder.create();
+				 return dialog;
+			case HELP_DIALOG:
+				 LayoutInflater inflat = this.getLayoutInflater();
+				 View helpdialog = inflat.inflate(R.layout.helpdialog, null);
+				 builder.setView(helpdialog);
+				 builder.setCancelable(false)
+				 .setNegativeButton(this.getResources().getString(R.string.dialog_CANCEL), new DialogInterface.OnClickListener() {
+					 public void onClick(DialogInterface dialog, int id) {
 						 dialog.cancel();
 					 }
 				 });
@@ -359,7 +385,7 @@ public class FileCommander extends Activity {
 	// Create a new file in the current directory
 	//*************************************************************************
 	
-	public void createNewFile(String filename){
+	private void createNewFile(String filename){
 		File newFile = new File(mFSAdapter.currentPath(), filename);
 		try {
 			if(newFile.createNewFile()){
@@ -380,7 +406,7 @@ public class FileCommander extends Activity {
 	// Create a new directory in the current directory
 	//*************************************************************************
 	
-	public void createNewDir(String dirname){
+	private void createNewDir(String dirname){
 		File newDir = new File(mFSAdapter.currentPath(), dirname);
 		if(newDir.mkdir()){
 			Toast.makeText(this, this.getResources().getString(R.string.operation_success), Toast.LENGTH_LONG).show();
@@ -397,7 +423,7 @@ public class FileCommander extends Activity {
 	// Rename file or directory to newname
 	//*************************************************************************
 	
-	public void renameSelectedFile(String newName){
+	private void renameSelectedFile(String newName){
 		if(mFSAdapter!= null){
 			File renFile = new File(mFSAdapter.getPath(mLastSelectedItem));
 			renFile.renameTo(new File(mFSAdapter.currentPath()+"/"+newName));
@@ -410,7 +436,7 @@ public class FileCommander extends Activity {
 	// delete file or directory
 	//*************************************************************************
 	
-	public void deleteSelectedFile(String path){
+	private void deleteSelectedFile(String path){
 		if(mFSAdapter!= null){
 			File delFile = new File(path);
 			if(delFile.isDirectory()){
@@ -426,7 +452,7 @@ public class FileCommander extends Activity {
 		}
 	}
 	
-	public void deleteSelectedFile(){
+	private void deleteSelectedFile(){
 		if(mFSAdapter!= null){
 			deleteSelectedFile(mFSAdapter.getPath(mLastSelectedItem));
 		}
@@ -437,7 +463,7 @@ public class FileCommander extends Activity {
 	// view file 
 	//*************************************************************************
 	
-	public void viewSelectedFile(String path){
+	private void viewSelectedFile(String path){
 		if(mFSAdapter!= null){
 			  File vFile = new File(path);
 			  Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -455,7 +481,7 @@ public class FileCommander extends Activity {
 	}
 	
 	
-	public void openSelectedFile(){
+	private void openSelectedFile(){
 		if(mFSAdapter!= null){
 			if(mFSAdapter.relocateToPosition(mLastSelectedItem)){
 				mPath= mFSAdapter.currentPath();
@@ -471,7 +497,7 @@ public class FileCommander extends Activity {
 	// send file 
 	//*************************************************************************
 	
-	public void sendSelectedFile(String path){
+	private void sendSelectedFile(String path){
 		if(mFSAdapter!= null){
 			  File sendFile = new File(path);
 			  Intent intent = new Intent(Intent.ACTION_SEND);
@@ -489,7 +515,7 @@ public class FileCommander extends Activity {
 	}
 	
 	
-	public void sendSelectedFile(){
+	private void sendSelectedFile(){
 		if(mFSAdapter!= null){
 			sendSelectedFile(mFSAdapter.getPath(mLastSelectedItem));
 		}
@@ -500,7 +526,7 @@ public class FileCommander extends Activity {
 	// move file
 	//*************************************************************************
 	
-	public void selectMoveFile(){
+	private void selectMoveFile(){
 		if(mFSAdapter!= null){
 			mFileSourcePath=mFSAdapter.getPath(mLastSelectedItem);
 			mMoveModeActive=true;
@@ -509,7 +535,7 @@ public class FileCommander extends Activity {
 		}
 	}
 
-	public void moveFileHere(){
+	private void moveFileHere(){
 		if(mFSAdapter!= null && mFileSourcePath!=null){
 			File oldFile = new File(mFileSourcePath);
 			boolean success=oldFile.renameTo(new File(mFSAdapter.currentPath()+"/"+oldFile.getName()));
@@ -540,22 +566,48 @@ public class FileCommander extends Activity {
 	}
 	
 	
-	public void copyFileHere(){
+	private void copyFileHere(){
 		if(mFSAdapter!= null && mFileSourcePath!=null){
-			File oldFile = new File(mFileSourcePath);
-			if(oldFile.isFile()){
-				cp = new CopyTask();
-				cp.execute(mFileSourcePath,mFSAdapter.currentPath()+"/"+oldFile.getName());
-			}
-			else {
-				dismissDialog(COPY_DIALOG);
-				reloadAdapterData();
-			}
+			mtotalProgress=0;
+			mtotalSum=0;
+			recursiveCopy(mFileSourcePath,mFSAdapter.currentPath());
 			mCopyModeActive=false;
 			setMoveButtonState();
 		}
 	}
 	
+	
+	private void recursiveCopy(String sourcePath,String destinationPath){
+		if(mFSAdapter!= null && sourcePath!=null && destinationPath!=null){
+			File sourceFile = new File(sourcePath);
+			if(sourceFile.isFile()){
+				cp = new CopyTask();
+				cpTaskList.add(cp);
+				cp.execute(sourcePath,destinationPath+"/"+sourceFile.getName());
+			}
+			else if(sourceFile.isDirectory()){
+				File newDir = new File(destinationPath+"/"+sourceFile.getName());
+				if(newDir.mkdir()){
+					String[] fileList=sourceFile.list();
+					for(String fileName: fileList){
+						recursiveCopy(sourceFile.getAbsolutePath()+"/"+fileName,newDir.getAbsolutePath());
+					}
+				}
+			}
+		}
+	}
+	
+	private void cancelCopy(){
+		if(!cpTaskList.isEmpty()){
+			for(CopyTask cta: cpTaskList){
+			  if(cta !=null){
+				  cta.cancel(true);
+			  }
+			}
+		}
+		cpTaskList.clear();
+		reloadAdapterData();
+	}
 	
 	//*************************************************************************
 	// change the background image of the delete button when it is clicked
@@ -740,6 +792,15 @@ public class FileCommander extends Activity {
 	
 	
 	//*************************************************************************
+	// show the help screen
+	//*************************************************************************
+	
+	private void showHelpScreen(){
+		showDialog(HELP_DIALOG);
+	}
+	
+	
+	//*************************************************************************
 	// Observer gets called when adapter data has changed, this could mean we  
 	// need to refresh the displayed path
 	//*************************************************************************
@@ -766,14 +827,20 @@ public class FileCommander extends Activity {
 	
 	private class CopyTask extends AsyncTask<String,Integer,Integer>{
 
+		
 		@Override
 		protected void onPostExecute(Integer result) {
-			dismissDialog(COPY_DIALOG);
-			reloadAdapterData();
+			mcpTasks--;
+			if(mcpTasks<1){
+				dismissDialog(COPY_DIALOG);
+				mcpTasks=0;
+				FileCommander.this.cancelCopy();
+			}
 		}
 
 		@Override
 		protected void onPreExecute() {
+			mcpTasks++;
 			showDialog(COPY_DIALOG);
 		}
 
@@ -790,16 +857,15 @@ public class FileCommander extends Activity {
 			if(paths.length==2){
 				try {
 					int count=0;
-					long total=0,sourceSize=0;
 					byte[] buffer = new byte[8192];
 					File sourceFile = new File(paths[0]);
-					sourceSize=sourceFile.length();
+					mtotalSum+=sourceFile.length();
 					BufferedInputStream bufinp=new BufferedInputStream(new FileInputStream(sourceFile));
 					BufferedOutputStream outFile=new BufferedOutputStream(new FileOutputStream(new File(paths[1])));
 					while (((count = bufinp.read(buffer)) != -1) && (!this.isCancelled())){
 						outFile.write(buffer,0,count);
-						total+=count;
-						publishProgress((int) ((((float)total/sourceSize))*100));
+						mtotalProgress+=count;
+						publishProgress((int) ((((float)mtotalProgress/mtotalSum))*100));
 					} 
 					bufinp.close();
 					outFile.close();
