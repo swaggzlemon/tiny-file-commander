@@ -37,4 +37,6 @@
     <string name="help_fastdelete">This will activate the fast delete mode. While this is activated you can delete everything you touch.</string>
     <string name="optionmenu_help">Help</string>
     <string name="help_contextmenu">There is a context menu available for sending, renaming, viewing, starting, moving, copying files. To show the menu just longpress on a file icon.</string>
+    <string name="preference_showFilesize_title">Show Filesize</string>
+    <string name="preference_showFilesize_summary">Display filesize below filename</string>
 </resources>

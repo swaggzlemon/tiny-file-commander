@@ -23,7 +23,9 @@ package tritop.android.filecommander;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import android.content.Context;
 import android.util.Log;
@@ -36,12 +38,14 @@ import android.widget.TextView;
 
 public class StorageViewAdapter extends BaseAdapter {
 
+	private boolean showSize;
 	private String mCurrentPath;
 	private Context mContext;
 	private File mRootDir;
 	private String[] mFiles={};
 	private List<String> lmfiles = new ArrayList<String>();
 	private List<String> lmdirs = new ArrayList<String>();
+	private Map<String,Long> lmsizes =new HashMap<String,Long>();
 	
 	
 	//*************************************************************************
@@ -51,6 +55,7 @@ public class StorageViewAdapter extends BaseAdapter {
 	StorageViewAdapter(Context ctx,String path){
 		mContext = ctx;
 		mCurrentPath ="";
+		setShowSize(false);
 		this.relocateToRoot(path);
 	}
 	
@@ -62,13 +67,29 @@ public class StorageViewAdapter extends BaseAdapter {
 	StorageViewAdapter(Context ctx){
 		mContext = ctx;
 		mCurrentPath ="";
+		setShowSize(false);
 	}
 	
+	
+	//*************************************************************************
+	// getter and setter for showSize, true=show filesize below filename
+	//*************************************************************************
+	
+	public void setShowSize(boolean showSize) {
+		this.showSize = showSize;
+	}
+
+
+	public boolean getShowSize() {
+		return showSize;
+	}
+
 	
 	//*************************************************************************
 	// set new look in directory
 	//*************************************************************************
 	
+
 	public boolean relocateToRoot(String newPath){
 		if(mCurrentPath.equals(newPath)){
 			return true;
@@ -87,7 +108,7 @@ public class StorageViewAdapter extends BaseAdapter {
 	
 	
 	//*************************************************************************
-	// returns current look in path
+	// returns current path
 	//*************************************************************************
 	
 	public String currentPath(){
@@ -102,6 +123,7 @@ public class StorageViewAdapter extends BaseAdapter {
 	private void reloadContent(File dir){
 		mFiles=dir.list();
 		this.sortFileList();
+		this.getFileSizes();
 		this.notifyDataSetChanged();
 	}
 	
@@ -111,6 +133,7 @@ public class StorageViewAdapter extends BaseAdapter {
 			this.reloadContent(mRootDir);
 		}
 	}
+	
 	
 	//*************************************************************************
 	// Sorts file list, dirs to front 
@@ -146,6 +169,26 @@ public class StorageViewAdapter extends BaseAdapter {
 		else return 0;
 	}
 
+	
+	//*************************************************************************
+	// get the size for each file
+	//*************************************************************************
+	
+	public void getFileSizes(){
+		if(lmfiles!=null && showSize && lmfiles.size()>0){
+			lmsizes.clear();
+			for(String filename: lmfiles){
+				File chk = new File(mRootDir.getAbsolutePath(),filename);
+				try {
+					lmsizes.put(filename, chk.length());
+				}
+				catch(SecurityException e){
+					lmsizes.put(filename,0L);
+				}
+			}
+		}
+	}
+	
 	
 	//*************************************************************************
 	// is Filename at adapter[position] a directory?
@@ -227,13 +270,18 @@ public class StorageViewAdapter extends BaseAdapter {
 			convertView = inf.inflate(R.layout.fileview, parent, false);
 		}
 		TextView tvFilename = (TextView) convertView.findViewById(R.id.textViewFilename);
+		TextView tvExtra = (TextView) convertView.findViewById(R.id.textViewExtra);
 		ImageView imFile = (ImageView) convertView.findViewById(R.id.imageViewFileIcon);
+		tvExtra.setText("");
 		
 		if(lmdirs.contains(mFiles[position])){
 			imFile.setImageResource(R.drawable.blue_glossy_dirbaseb100);
 		}
 		else {
 			imFile.setImageResource(R.drawable.blue_glossy_filebaseb100);
+			if(showSize && lmsizes!=null){
+				tvExtra.setText(Long.toString(lmsizes.get(mFiles[position]))+" B");
+			}
 		}
 		tvFilename.setText(mFiles[position]);
 		return convertView;
