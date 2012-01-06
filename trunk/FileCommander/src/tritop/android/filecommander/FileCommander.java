@@ -96,7 +96,7 @@ public class FileCommander extends Activity {
 	private List<CopyTask> cpTaskList;
 	private SharedPreferences mSharedPref;
 	private boolean mPreferenceDeleteConfirmation;
-	
+	private boolean mPreferenceShowFilesize;
 	
 	
     @Override
@@ -368,6 +368,7 @@ public class FileCommander extends Activity {
 		loadPreferences();
 		setDeleteButtonState();
 		setMoveButtonState();
+		reloadAdapterData();
 		super.onResume();
 	}
     
@@ -378,6 +379,10 @@ public class FileCommander extends Activity {
 	
 	private void loadPreferences(){
 		mPreferenceDeleteConfirmation=mSharedPref.getBoolean("preferenceCheckboxFastDeleteConfirmation", true);
+		mPreferenceShowFilesize=mSharedPref.getBoolean("preferenceCheckboxShowFileSize", false);
+		if(mFSAdapter!= null){
+			mFSAdapter.setShowSize(mPreferenceShowFilesize);
+		}
 	}
 	
 	

@@ -37,4 +37,6 @@
     <string name="help_fastdelete">Mit diesem Knopf wird der Modus für schnelles Löschen aktiviert. Alles was in diesem Modus berührt wird wird gelöscht.</string>
     <string name="optionmenu_help">Hilfe</string>
     <string name="help_contextmenu">Es erscheint ein Pop-Up-Menü wenn sie längere Zeit auf eine Datei klicken. Über das Menü lassen sich Dateien starten, umbenennen, löschen, kopieren, verschieben, versenden.</string>
+	<string name="preference_showFilesize_title">Dateigröße anzeigen</string>
+    <string name="preference_showFilesize_summary">Zeigt die Dateigröße unter dem Dateinamen an</string>
 </resources>
