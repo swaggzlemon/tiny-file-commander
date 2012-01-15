@@ -45,7 +45,7 @@ public class StorageViewAdapter extends BaseAdapter {
 	private String[] mFiles={};
 	private List<String> lmfiles = new ArrayList<String>();
 	private List<String> lmdirs = new ArrayList<String>();
-	private Map<String,Long> lmsizes =new HashMap<String,Long>();
+	private Map<String,String> lmsizes =new HashMap<String,String>();
 	
 	
 	//*************************************************************************
@@ -179,11 +179,26 @@ public class StorageViewAdapter extends BaseAdapter {
 			lmsizes.clear();
 			for(String filename: lmfiles){
 				File chk = new File(mRootDir.getAbsolutePath(),filename);
+				String value="err";
 				try {
-					lmsizes.put(filename, chk.length());
+					long size = chk.length();
+					int unit=0;
+					while(size>1024){
+						size/=1024;
+						unit++;
+					}
+					
+					switch(unit){
+						case 0:value=String.valueOf(size)+" B";break;
+						case 1:value=String.valueOf(size)+" KB";break;
+						case 2:value=String.valueOf(size)+" MB";break;
+						case 3:value=String.valueOf(size)+" GB";break;
+					default:value="err";
+				}
+					lmsizes.put(filename, value);
 				}
 				catch(SecurityException e){
-					lmsizes.put(filename,0L);
+					lmsizes.put(filename,value);
 				}
 			}
 		}
@@ -260,7 +275,7 @@ public class StorageViewAdapter extends BaseAdapter {
 
 	
 	//*************************************************************************
-	// Build item views for the grid view
+	// Build item views for the grid layout view
 	//*************************************************************************
 	
 	@Override
@@ -280,7 +295,7 @@ public class StorageViewAdapter extends BaseAdapter {
 		else {
 			imFile.setImageResource(R.drawable.blue_glossy_filebaseb100);
 			if(showSize && lmsizes!=null){
-				tvExtra.setText(Long.toString(lmsizes.get(mFiles[position]))+" B");
+				tvExtra.setText(lmsizes.get(mFiles[position]));
 			}
 		}
 		tvFilename.setText(mFiles[position]);
