@@ -1,0 +1,1 @@
+Tiny file commander is a android file manager. It's very smal and very fast. You are not asked for any strange permissions. You can copy, move, rename, delete, view, send and install files. All this with just ~130KB. Enjoy!
